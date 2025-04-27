@@ -4,17 +4,17 @@ let signer;
 let nftContract;
 let marketplaceContract;
 
-const nftContractAddress = "0x75Fc847D1617e8A33f57431Cfcc5512eb7d356f8";
+const nftContractAddress = "0x323CB1377514C0DD5a1C94c87De43Aa7075952ba";
 const nftContractABI = [
   "function mint(string memory tokenURI) public",
   "event Minted(address indexed toAddress, uint256 indexed tokenId, string tokenURI)"
 ];
 
-const marketplaceContractAddress = "0x4264ac0B9192C8d0C8DE54237D31C25fc7f0E26F";
+const marketplaceContractAddress = "0x2E2E3d1332C7012243a625cA77d016cA7A46CF96";
 const marketplaceContractABI = [
-  "function createMarketItem(uint256 tokenId, uint256 price) public",
+  "function createMarketItem(uint256 tokenId, string tokenURI, string name, uint256 price) public",
   "function createMarketSale(uint256 tokenId) public payable",
-  "function fetchMarketItems() public view returns (tuple(uint256 tokenId, address seller, uint256 price, bool isSold)[])"
+  "function fetchMarketItems() public view returns (tuple(uint256 tokenId, address seller, uint256 price, string tokenURI, string name, bool isSold)[])"
 ];
 
 async function connectMetaMask() {
@@ -40,12 +40,14 @@ async function connectMetaMask() {
 
 let isConnecting = false; // <-- Nouveau: pour éviter les spam
 
-async function mintNFT() {
+async function mintNFT(nftName) {
   try {
     if (typeof window.ethereum === 'undefined') {
       alert('MetaMask non détecté');
       return;
     }
+
+    console.log("nft name:", nftName);
 
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -89,7 +91,7 @@ async function mintNFT() {
           console.log("tokenURI:", tokenURI);
 
           const price = ethers.parseUnits('0.1', 'ether');
-          const saleTx = await marketplaceContract.createMarketItem(tokenId, price);
+          const saleTx = await marketplaceContract.createMarketItem(tokenId, tokenURI, nftName, price);
           await saleTx.wait();
           console.log('NFT listé sur le marché avec succès !');
     
@@ -101,18 +103,6 @@ async function mintNFT() {
 
   } catch (error) {
     console.error('Erreur lors de la création du NFT et de la mise en vente sur le marketplace :', error);
-  }
-}
-
-async function listNFTForSale(tokenId, priceInEther) {
-  try {
-    const price = ethers.parseEther(priceInEther); // conversion
-    const tx = await marketplaceContract.createMarketItem(tokenId, price);
-    await tx.wait();
-    console.log('NFT listé pour la vente !');
-    loadMarketplaceNFTs(); // recharge la liste
-  } catch (error) {
-    console.error('Erreur lors de la mise en vente du NFT :', error);
   }
 }
 
@@ -135,30 +125,42 @@ async function loadMarketplaceNFTs() {
     const nftList = document.getElementById('nft-list');
     nftList.innerHTML = '';
 
-    if (items.length === 0) {
+    const validItems = items.filter(item => item.seller !== '0x0000000000000000000000000000000000000000');
+
+
+    if (validItems.length === 0) {
       nftList.innerHTML = "<p>Aucun NFT en vente actuellement.</p>";
     }
 
     console.log("NFTs en vente :", items);
 
-    items.forEach(item => {
+    validItems.forEach(item => {
       const nftElement = document.createElement('div');
-      nftElement.classList.add('nft-item');
-
+      nftElement.classList.add('nft-card'); // on utilise une classe plus spécifique pour le style
+    
       nftElement.innerHTML = `
-        <p><strong>Token ID:</strong> ${item.tokenId}</p>
-        <p><strong>Prix:</strong> ${ethers.formatEther(item.price)} ETH</p>
-        <button class="buy-button" data-token-id="${item.tokenId}" data-price="${item.price}">Acheter</button>
+        <div class="nft-image-container">
+          <img src="${item.tokenURI}" alt="NFT Image" class="nft-image" />
+        </div>
+        <div class="nft-details">
+          <h2>${item.name}</h2>
+          <p><strong>Token ID:</strong> ${item.tokenId}</p>
+          <p><strong>Prix:</strong> ${ethers.formatEther(item.price)} ETH</p>
+          <p><strong>Vendu:</strong> ${item.isSold ? "Oui" : "Non"}</p>
+          <button class="buy-button" data-token-id="${item.tokenId}" data-price="${item.price}">
+            Acheter
+          </button>
+        </div>
       `;
-
+    
       nftList.appendChild(nftElement);
     });
-
+    
     document.querySelectorAll('.buy-button').forEach(button => {
       button.addEventListener('click', async (e) => {
         const tokenId = e.target.getAttribute('data-token-id');
         const price = e.target.getAttribute('data-price');
-        await buyNFT(tokenId, price);
+        await buyNFT(tokenId, BigInt(price));
       });
     });
     
@@ -169,5 +171,12 @@ async function loadMarketplaceNFTs() {
 
 
 // Initialisation de l'interface
-document.getElementById('mint-button').addEventListener('click', mintNFT);
+document.getElementById('mint-button').addEventListener('click', async () => {
+  const nftName = document.getElementById('nftName').value;
+  if (nftName.length === 0) {
+    alert("Veuillez entrer un nom pour le NFT.");
+    return;
+  }
+  mintNFT(nftName);
+});
 document.addEventListener('DOMContentLoaded', connectMetaMask);

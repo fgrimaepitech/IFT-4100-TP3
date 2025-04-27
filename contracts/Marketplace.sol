@@ -9,6 +9,8 @@ contract ArtMarketplace is Ownable {
         uint256 tokenId;
         address payable seller;
         uint256 price;
+        string tokenURI;
+        string name;
         bool isSold;
     }
 
@@ -22,7 +24,7 @@ contract ArtMarketplace is Ownable {
 
     uint256 public marketItemCount;
 
-    function createMarketItem(uint256 tokenId, uint256 price) public {
+    function createMarketItem(uint256 tokenId, string memory tokenURI, string memory name, uint256 price) public {
         require(artNFTContract.ownerOf(tokenId) == msg.sender, "You must own the NFT");
         require(price > 0, "Price must be greater than zero");
 
@@ -30,6 +32,8 @@ contract ArtMarketplace is Ownable {
             tokenId: tokenId,
             seller: payable(msg.sender),
             price: price,
+            tokenURI: tokenURI,
+            name: name,
             isSold: false
         });
 

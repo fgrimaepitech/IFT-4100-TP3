@@ -8,28 +8,45 @@ body {
   margin: 0;
 }
 
+p {
+  margin: 0;
+}
+
 .container {
   background-color: white;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  width: 400px;
+  width: 80%;
+  height: fit-content;
 }
 
 h1 {
   text-align: center;
 }
 
+#artist-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+#buyer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 #nft-list {
   display: flex;
-  flex-wrap: wrap;
+  overflow: auto;
+  height: 100%;
   gap: 10px;
 }
 
 #nft-list div {
-  width: 100px;
-  height: 100px;
-  background-color: #ddd;
   text-align: center;
   border-radius: 8px;
   display: flex;
@@ -38,18 +55,72 @@ h1 {
 }
 
 button {
-  background-color: #28a745;
+  background-color: #4a87bc93;
   color: white;
   padding: 10px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  box-shadow: 0 0 0 0px hsla(242, 44%, 33%, 0.412);
+  transition: all 0.2s ease;
 }
 
 button:hover {
-  background-color: #218838;
+  box-shadow: 0 0 0 1px hsla(0, 0%, 0%, 0.412);
 }
 
-input[type="file"] {
-  margin: 10px 0;
+input {
+  margin: 0;
+  padding: 8px;
+  font-size: 15px;
+  width: 300px;
+  border-radius: 8px;
+  border: 1px solid hsla(209, 15%, 39%, 0.576);
+  outline: none;
+  box-shadow: 0 0 0 0px hsla(242, 37%, 73%, 0.412);
+  transition: all 0.1s ease;
+  &:hover {
+    box-shadow: 0 0 0 1px hsla(242, 37%, 73%, 0.412);
+  }
+
+  &:focus {
+    border-color: hsla(208, 35%, 69%, 0.576);
+  }
+}
+
+.nft-card {
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 250px;
+  height: 100%;
+  margin: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nft-image-container {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.nft-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nft-details {
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: center;
+  gap: 12px;
+  padding: 8px 0;
 }
