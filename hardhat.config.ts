@@ -1,8 +1,13 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+require("@nomicfoundation/hardhat-ethers");
+require('dotenv').config();
 
-const config: HardhatUserConfig = {
+module.exports = {
   solidity: "0.8.28",
+  networks: {
+    base_sepolia: {
+      url: "https://sepolia.base.org",
+      accounts: [process.env.METAMASK_PRIVATE_KEY],
+      chainId: 84532,
+    },
+  }
 };
-
-export default config;
