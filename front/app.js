@@ -4,7 +4,7 @@ let signer;
 let nftContract;
 let marketplaceContract;
 
-const nftContractAddress = "0xfdb85EFdaC77c014e60c930c40d3CFB767309A5A";
+const nftContractAddress = "0x45De5Cf7cD94952de722b80D9fc94FcFBA42a56d";
 const nftContractABI = [
   "function mint(string memory tokenURI) public",
   "function getApproved(uint256 tokenId) external view returns (address)",
@@ -12,7 +12,7 @@ const nftContractABI = [
   "event Minted(address indexed toAddress, uint256 indexed tokenId, string tokenURI)"
 ];
 
-const marketplaceContractAddress = "0xE588CDa1456665572643885f8fB7d1D3FdA27A37";
+const marketplaceContractAddress = "0x4Bf8e098d5F19AAF89A9C62337ecCf7B89BD70E6";
 const marketplaceContractABI = [
   "function createMarketItem(uint256 tokenId, string memory tokenURI, string memory name, uint256 price) public",
   "function createMarketSale(uint256 tokenId) public payable",

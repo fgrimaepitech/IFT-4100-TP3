@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ArtMarketplace is Ownable {
+    // structure pour un item de marché
     struct MarketItem {
         uint256 tokenId;
         address payable seller;
@@ -25,6 +26,8 @@ contract ArtMarketplace is Ownable {
         artNFTContract = IERC721(_artNFTAddress);
     }
 
+    // fonction pour créer un item de marché
+    // elle est publique pour être accessible depuis le front
     function createMarketItem(uint256 tokenId, string memory tokenURI, string memory name, uint256 price) public {
         require(artNFTContract.ownerOf(tokenId) == msg.sender, "You must own the NFT");
         require(price > 0, "Price must be greater than zero");
@@ -41,6 +44,9 @@ contract ArtMarketplace is Ownable {
         marketItemCount++;
     }
 
+    // fonction pour créer une vente de marché
+    // elle est publique pour être accessible depuis le front
+    // elle est payable pour recevoir le paiement
     function createMarketSale(uint256 tokenId) public payable {
         MarketItem storage item = idToMarketItem[tokenId];
         require(msg.value == item.price, "Please submit the asking price in order to complete the purchase");
@@ -59,6 +65,8 @@ contract ArtMarketplace is Ownable {
         ownedNFTs[msg.sender].push(tokenId);
     }
 
+    // fonction pour récupérer les items de marché
+    // elle est publique pour être accessible depuis le front
     function fetchMarketItems() public view returns (MarketItem[] memory) {
         uint256 itemCount = 0;
         for (uint256 i = 0; i < marketItemCount; i++) {
@@ -79,6 +87,8 @@ contract ArtMarketplace is Ownable {
         return items;
     }
 
+    // fonction pour récupérer les items de marché acheté par un utilisateur
+    // elle est publique pour être accessible depuis le front
     function fetchOwnedNFTs(address user) public view returns (uint256[] memory) {
         return ownedNFTs[user];
     }
