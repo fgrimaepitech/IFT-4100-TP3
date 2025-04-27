@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract ArtMarketplace is Ownable {
+    struct MarketItem {
+        uint256 tokenId;
+        address payable seller;
+        uint256 price;
+        bool isSold;
+    }
+
+    mapping(uint256 => MarketItem) public idToMarketItem;
+
+    IERC721 private artNFTContract;
+
+    constructor(address _artNFTAddress) Ownable(msg.sender) {
+        artNFTContract = IERC721(_artNFTAddress);
+    }
+
+    uint256 public marketItemCount;
+
+    function createMarketItem(uint256 tokenId, uint256 price) public {
+        require(artNFTContract.ownerOf(tokenId) == msg.sender, "You must own the NFT");
+        require(price > 0, "Price must be greater than zero");
+
+        idToMarketItem[tokenId] = MarketItem({
+            tokenId: tokenId,
+            seller: payable(msg.sender),
+            price: price,
+            isSold: false
+        });
+
+        marketItemCount++;
+    }
+
+    function createMarketSale(uint256 tokenId) public payable {
+        MarketItem storage item = idToMarketItem[tokenId];
+        require(msg.value == item.price, "Please submit the asking price in order to complete the purchase");
+        require(!item.isSold, "This NFT is already sold");
+
+        item.seller.transfer(msg.value);
+        artNFTContract.safeTransferFrom(item.seller, msg.sender, tokenId);
+        item.isSold = true;
+    }
+
+    function fetchMarketItems() public view returns (MarketItem[] memory) {
+        uint256 itemCount = 0;
+        for (uint256 i = 0; i < marketItemCount; i++) {
+            if (idToMarketItem[i].isSold == false) {
+                itemCount++;
+            }
+        }
+
+        MarketItem[] memory items = new MarketItem[](itemCount);
+        uint256 currentIndex = 0;
+        for (uint256 i = 0; i < marketItemCount; i++) {
+            if (idToMarketItem[i].isSold == false) {
+                items[currentIndex] = idToMarketItem[i];
+                currentIndex++;
+            }
+        }
+
+        return items;
+    }
+}

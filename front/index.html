@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marché d'Art NFT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Marché d'Art NFT</h1>
+    
+    <!-- Artist Section -->
+    <div id="artist-section">
+      <h2>Créer un NFT</h2>
+      <input type="file" id="file-input" />
+      <button id="mint-button">Créer NFT</button>
+    </div>
+
+    <!-- Buyer Section -->
+    <div id="buyer-section">
+      <h2>Parcourir les NFT</h2>
+      <div id="nft-list"></div>
+    </div>
+    
+    <p id="status"></p>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
