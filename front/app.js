@@ -4,41 +4,45 @@ let signer;
 let nftContract;
 let marketplaceContract;
 
-const nftContractAddress = "0x323CB1377514C0DD5a1C94c87De43Aa7075952ba";
+const nftContractAddress = "0xfdb85EFdaC77c014e60c930c40d3CFB767309A5A";
 const nftContractABI = [
   "function mint(string memory tokenURI) public",
+  "function getApproved(uint256 tokenId) external view returns (address)",
+  "function approve(address to, uint256 tokenId) external",
   "event Minted(address indexed toAddress, uint256 indexed tokenId, string tokenURI)"
 ];
 
-const marketplaceContractAddress = "0x2E2E3d1332C7012243a625cA77d016cA7A46CF96";
+const marketplaceContractAddress = "0xE588CDa1456665572643885f8fB7d1D3FdA27A37";
 const marketplaceContractABI = [
-  "function createMarketItem(uint256 tokenId, string tokenURI, string name, uint256 price) public",
+  "function createMarketItem(uint256 tokenId, string memory tokenURI, string memory name, uint256 price) public",
   "function createMarketSale(uint256 tokenId) public payable",
-  "function fetchMarketItems() public view returns (tuple(uint256 tokenId, address seller, uint256 price, string tokenURI, string name, bool isSold)[])"
+  "function fetchMarketItems() public view returns (tuple(uint256 tokenId, address seller, uint256 price, string tokenURI, string name, bool isSold)[])",
+  "function fetchOwnedNFTs(address user) public view returns (uint256[] memory)",
+  "function idToMarketItem(uint256) public view returns (tuple(uint256 tokenId, address seller, uint256 price, string tokenURI, string name, bool isSold))"
 ];
+
 
 async function connectMetaMask() {
   if (window.ethereum) {
     await window.ethereum.request({ method: 'eth_requestAccounts' });
     
     provider = new ethers.BrowserProvider(window.ethereum);
-    signer = await provider.getSigner();  // ← manque await ici aussi !
+    signer = await provider.getSigner();
 
     const accounts = await provider.listAccounts();
     currentAccount = accounts[0];
-    document.getElementById('status').textContent = `Connecté avec : ${currentAccount}`;
 
     nftContract = new ethers.Contract(nftContractAddress, nftContractABI, signer);
     marketplaceContract = new ethers.Contract(marketplaceContractAddress, marketplaceContractABI, signer);
     marketplaceReadContract = new ethers.Contract(marketplaceContractAddress, marketplaceContractABI, provider);
 
-    loadMarketplaceNFTs();
+    await loadMarketplaceNFTs();
+    await loadOwnedNFTs();
   } else {
     alert("MetaMask non détecté");
   }
 }
 
-let isConnecting = false; // <-- Nouveau: pour éviter les spam
 
 async function mintNFT(nftName) {
   try {
@@ -59,17 +63,13 @@ async function mintNFT(nftName) {
       return;
     }
 
-    // Exemple d'URL de token URI
     const tokenURI = "https://ipfs.io/ipfs/QmQEVVLJUR1WLN15S49rzDJsSP7za9DxeqpUzWuG4aondg";
 
-    // 1. Mint le NFT
     const tx = await contract.mint(tokenURI);
     console.log('Transaction envoyée:', tx.hash);
 
-    // Attendre la confirmation de la transaction et récupérer le receipt
     const receipt = await tx.wait();
     console.log('NFT créé avec succès !');
-    console.log('Receipt de la transaction:', receipt);
 
     const iface = new ethers.Interface([
       "event Minted(address indexed toAddress, uint256 indexed tokenId, string tokenURI)"
@@ -77,9 +77,7 @@ async function mintNFT(nftName) {
 
     for (const log of receipt.logs) {
       try {
-        // Tenter de parser le log
         const parsedLog = iface.parseLog(log);
-        console.log('Log analysé:', parsedLog);
         
         if (parsedLog.name === "Minted") {
           const toAddress = parsedLog.args.toAddress;
@@ -90,14 +88,13 @@ async function mintNFT(nftName) {
           console.log("tokenId:", tokenId.toString());
           console.log("tokenURI:", tokenURI);
 
-          const price = ethers.parseUnits('0.1', 'ether');
+          const price = ethers.parseUnits('0.001', 'ether');
+          console.log("Prix de vente:", price.toString());
           const saleTx = await marketplaceContract.createMarketItem(tokenId, tokenURI, nftName, price);
           await saleTx.wait();
           console.log('NFT listé sur le marché avec succès !');
-    
         }
       } catch (e) {
-        // Si parseLog échoue sur un log non concerné, on ignore
       }
     }
 
@@ -106,22 +103,56 @@ async function mintNFT(nftName) {
   }
 }
 
-async function buyNFT(tokenId, price) {
+async function checkApproval(tokenId) {
   try {
-    const tx = await marketplaceContract.createMarketSale(tokenId, { value: price });
-    await tx.wait();
-    console.log('NFT acheté avec succès !');
-    loadMarketplaceNFTs(); // recharge la liste
+      const approvedAddress = await nftContract.getApproved(tokenId);
+      return approvedAddress;
   } catch (error) {
-    console.error('Erreur lors de l\'achat du NFT :', error);
+      console.error("Erreur lors de la vérification de l'approbation :", error);
   }
 }
+
+async function approveNFT(tokenId) {
+  try {
+      console.log(`Approbation du NFT avec tokenId ${tokenId} pour le contrat marketplace...`);
+      const tx = await nftContract.approve(marketplaceContractAddress, tokenId);
+      await tx.wait();
+      console.log("NFT approuvé avec succès !");
+  } catch (error) {
+      console.error("Erreur lors de l'approbation :", error);
+  }
+}
+
+async function buyNFT(tokenId, price) {
+  try {
+    console.log("price", price);
+    const approvedAddress = await checkApproval(tokenId)
+    if (approvedAddress !== marketplaceContractAddress) {
+        await approveNFT(tokenId);
+    }
+    const tx = await marketplaceContract.createMarketSale(tokenId, { value: price });
+    const receipt = await tx.wait();
+    console.log('NFT acheté avec succès !');
+    console.log('Receipt:', receipt);
+    loadMarketplaceNFTs();
+  } catch (error) {
+    console.error('Erreur lors de l\'achat du NFT :', error);
+    if (error.receipt) {
+      console.log('Transaction receipt:', error.receipt);
+    }
+    if (error.error) {
+      console.log('Erreur du contrat:', error.error);
+    }
+  }
+}
+
+
 
 async function loadMarketplaceNFTs() {
   if (!marketplaceReadContract) return;
 
   try {
-    const items = await marketplaceReadContract.fetchMarketItems();  // <= ici, use read contract
+    const items = await marketplaceReadContract.fetchMarketItems();
     const nftList = document.getElementById('nft-list');
     nftList.innerHTML = '';
 
@@ -136,7 +167,7 @@ async function loadMarketplaceNFTs() {
 
     validItems.forEach(item => {
       const nftElement = document.createElement('div');
-      nftElement.classList.add('nft-card'); // on utilise une classe plus spécifique pour le style
+      nftElement.classList.add('nft-card');
     
       nftElement.innerHTML = `
         <div class="nft-image-container">
@@ -169,8 +200,46 @@ async function loadMarketplaceNFTs() {
   }
 }
 
+async function loadOwnedNFTs() {
+  if (!marketplaceReadContract) return;
 
-// Initialisation de l'interface
+  try {
+    const ownedTokenIds = await marketplaceReadContract.fetchOwnedNFTs(currentAccount);
+
+    const ownedList = document.getElementById('owned-nft-list');
+    ownedList.innerHTML = '';
+
+    if (ownedTokenIds.length === 0) {
+      ownedList.innerHTML = "<p>Vous ne possédez aucun NFT pour le moment.</p>";
+      return;
+    }
+
+    for (const tokenId of ownedTokenIds) {
+      const marketItem = await marketplaceReadContract.idToMarketItem(tokenId);
+
+      const nftElement = document.createElement('div');
+      nftElement.classList.add('nft-card');
+
+      nftElement.innerHTML = `
+        <div class="nft-image-container">
+          <img src="${marketItem.tokenURI}" alt="NFT Image" class="nft-image" />
+        </div>
+        <div class="nft-details">
+          <h2>${marketItem.name}</h2>
+          <p><strong>Token ID:</strong> ${marketItem.tokenId}</p>
+          <p><strong>Prix d'achat initial:</strong> ${ethers.formatEther(marketItem.price)} ETH</p>
+          <p><strong>Statut:</strong> ${marketItem.isSold ? "Acheté" : "Disponible"}</p>
+        </div>
+      `;
+
+      ownedList.appendChild(nftElement);
+    }
+  } catch (error) {
+    console.error("Erreur lors du chargement de vos NFTs :", error);
+  }
+}
+
+
 document.getElementById('mint-button').addEventListener('click', async () => {
   const nftName = document.getElementById('nftName').value;
   if (nftName.length === 0) {
